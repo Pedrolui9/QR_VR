@@ -1,67 +1,311 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
 
     <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+          content="width=device-width,
+                   initial-scale=1.0,
+                   maximum-scale=1.0,
+                   user-scalable=no">
 
-    <title>Modelo 3D AR</title>
+    <title>Realidad Aumentada</title>
 
-    <script type="module"
-        src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js">
-    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+
+            min-height: 100vh;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            text-align: center;
+        }
+
+        .contenedor {
+            width: 90%;
+            max-width: 450px;
+        }
+
+        h1 {
+            font-size: 26px;
+        }
+
+        p {
+            color: #ccc;
+            line-height: 1.5;
+        }
+
+        button {
+            width: 100%;
+            padding: 18px;
+
+            margin-top: 20px;
+
+            font-size: 18px;
+            font-weight: bold;
+
+            border: none;
+            border-radius: 12px;
+
+            background: white;
+            color: black;
+
+            cursor: pointer;
+        }
+
+        #estado {
+            margin-top: 20px;
+            font-size: 14px;
+        }
+    </style>
 </head>
 
 <body>
 
-<model-viewer
-    src="Robot.glb"
+<div class="contenedor">
 
-    alt="Modelo 3D del edificio"
+    <h1>Modelo en Realidad Aumentada</h1>
 
-    ar
+    <p id="mensaje">
+        Iniciando realidad aumentada...
+    </p>
 
-    ar-modes="webxr scene-viewer quick-look"
-
-    ar-scale="auto"
-
-    ar-placement="floor"
-
-    camera-controls
-
-    auto-rotate
-
-    shadow-intensity="1"
-
-    style="
-        width:100%;
-        height:90vh;
-        background:#eeeeee;
-    ">
-
-    <button
-        slot="ar-button"
-        style="
-        position:absolute;
-        bottom:30px;
-        left:50%;
-        transform:translateX(-50%);
-        padding:15px 25px;
-        font-size:18px;
-        border:none;
-        border-radius:10px;
-        background:black;
-        color:white;
-        ">
-
-        📱 Ver en realidad aumentada
-
+    <button id="botonAR">
+        📱 Abrir Realidad Aumentada
     </button>
 
-</model-viewer>
+    <div id="estado"></div>
+
+</div>
+
+
+<script>
+
+    /*
+    ==================================================
+    CONFIGURACIÓN
+    ==================================================
+    */
+
+    // CAMBIÁ SOLAMENTE ESTE NOMBRE
+    const archivoModelo = "Robot.glb";
+
+
+    /*
+    ==================================================
+    DETECTAR DISPOSITIVO
+    ==================================================
+    */
+
+    const userAgent = navigator.userAgent.toLowerCase();
+
+    const esAndroid =
+        userAgent.includes("android");
+
+    const esIOS =
+        /iphone|ipad|ipod/.test(userAgent);
+
+
+    /*
+    ==================================================
+    URL ABSOLUTA DEL MODELO
+    ==================================================
+    */
+
+    const modeloURL =
+        new URL(
+            archivoModelo,
+            window.location.href
+        ).href;
+
+
+    /*
+    ==================================================
+    URL DE RETORNO
+    ==================================================
+
+    Si ARCore no funciona, vuelve a esta página
+    agregando ?fallback=1.
+
+    Eso evita un bucle infinito.
+    */
+
+    const paginaActual =
+        window.location.origin +
+        window.location.pathname;
+
+    const fallbackURL =
+        paginaActual + "?fallback=1";
+
+
+    /*
+    ==================================================
+    CREAR INTENT DE GOOGLE SCENE VIEWER
+    ==================================================
+    */
+
+    function crearIntentAR() {
+
+        const modelo =
+            encodeURIComponent(modeloURL);
+
+        const fallback =
+            encodeURIComponent(fallbackURL);
+
+
+        return (
+            "intent://arvr.google.com/scene-viewer/1.0" +
+
+            "?file=" + modelo +
+
+            "&mode=ar_only" +
+
+            "&resizable=true" +
+
+            "#Intent;" +
+
+            "scheme=https;" +
+
+            "package=com.google.ar.core;" +
+
+            "action=android.intent.action.VIEW;" +
+
+            "S.browser_fallback_url=" +
+            fallback + ";" +
+
+            "end;"
+        );
+    }
+
+
+    /*
+    ==================================================
+    ABRIR REALIDAD AUMENTADA
+    ==================================================
+    */
+
+    function abrirAR() {
+
+        if (!esAndroid) {
+
+            if (esIOS) {
+
+                document.getElementById("mensaje")
+                    .innerHTML =
+                    "Este sistema está configurado actualmente para Android.";
+
+            } else {
+
+                document.getElementById("mensaje")
+                    .innerHTML =
+                    "Abrí esta página desde un teléfono Android.";
+
+            }
+
+            return;
+        }
+
+
+        const intentAR =
+            crearIntentAR();
+
+
+        document.getElementById("estado")
+            .innerHTML =
+            "Abriendo ARCore...";
+
+
+        window.location.href =
+            intentAR;
+    }
+
+
+    /*
+    ==================================================
+    BOTÓN MANUAL
+    ==================================================
+
+    Algunos navegadores Android bloquean que una
+    página abra automáticamente otra aplicación.
+
+    Este botón queda como respaldo.
+    */
+
+    document
+        .getElementById("botonAR")
+        .addEventListener(
+            "click",
+            abrirAR
+        );
+
+
+    /*
+    ==================================================
+    INTENTO AUTOMÁTICO
+    ==================================================
+    */
+
+    const parametros =
+        new URLSearchParams(
+            window.location.search
+        );
+
+
+    const vieneDeFallback =
+        parametros.get("fallback") === "1";
+
+
+    if (esAndroid && !vieneDeFallback) {
+
+        document.getElementById("mensaje")
+            .innerHTML =
+            "Abriendo cámara de realidad aumentada...";
+
+
+        /*
+        Intenta entrar automáticamente.
+
+        El pequeño retraso permite que Android
+        termine de cargar la página.
+        */
+
+        setTimeout(
+            abrirAR,
+            500
+        );
+
+    }
+
+
+    /*
+    ==================================================
+    SI ARCORE DEVUELVE AL NAVEGADOR
+    ==================================================
+    */
+
+    if (vieneDeFallback) {
+
+        document.getElementById("mensaje")
+            .innerHTML =
+            "No se pudo iniciar AR automáticamente. " +
+            "Presioná el botón para volver a intentarlo.";
+
+        document.getElementById("estado")
+            .innerHTML =
+            "Verificá que Google Play Services for AR esté instalado.";
+    }
+
+</script>
 
 </body>
-
 </html>
